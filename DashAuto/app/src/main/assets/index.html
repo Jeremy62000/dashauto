@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>DashAuto</title>
+<style>
+  :root{
+    --bg:#060a12; --text:#f2f6ff; --muted:#8a9bb8;
+    --glass:rgba(255,255,255,.06); --glass2:rgba(255,255,255,.11); --line:rgba(255,255,255,.10);
+    --accent:#22d3ee; --accent2:#8b5cf6;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:Roboto,"Segoe UI",system-ui,sans-serif;overflow:hidden}
+  body{
+    background:
+      radial-gradient(700px 420px at 100% 0%, rgba(139,92,246,.22), transparent 65%),
+      radial-gradient(700px 420px at 0% 100%, rgba(34,211,238,.16), transparent 65%),
+      var(--bg);
+    display:flex;flex-direction:column;padding:1.8vh 1.8vw;gap:1.8vh;
+  }
+
+  /* ---------- barre du haut ---------- */
+  .top{flex:0 0 auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1.5vw}
+  .clock{font-size:min(11.5vh,80px);font-weight:300;letter-spacing:-2px;line-height:1}
+  .date{font-size:min(3vh,21px);color:var(--muted);margin-top:.5vh;text-transform:capitalize}
+  .pill{display:flex;align-items:center;gap:.9vw;background:var(--glass);border:1px solid var(--line);
+    border-radius:999px;padding:.9vh 1.2vw}
+  .pill button{width:min(8vh,54px);height:min(8vh,54px);border-radius:50%;border:none;
+    background:transparent;color:var(--text);display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+  .pill button:active{background:var(--glass2)}
+  .pill button.play{background:var(--accent);color:#04202a}
+  .pill svg{width:52%;height:52%}
+  .wx{text-align:right}
+  .wx .t{font-size:min(7.2vh,50px);font-weight:300;line-height:1}
+  .wx .d{font-size:min(2.8vh,19px);color:var(--muted);margin-top:.5vh}
+
+  /* ---------- zone principale ---------- */
+  .main{flex:1 1 auto;display:grid;grid-template-columns:1.05fr 1.95fr;gap:1.4vw;min-height:0}
+  .card{background:var(--glass);border:1px solid var(--line);border-radius:26px;min-height:0}
+
+  .speed{display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+    padding:1.4vh 1vw 1.6vh;position:relative}
+  .gps{align-self:flex-start;display:flex;align-items:center;gap:.6vw;font-size:min(2.5vh,17px);color:var(--muted)}
+  .dot{width:1.3vh;height:1.3vh;border-radius:50%;background:#f59e0b}
+  .dot.ok{background:#22c55e}
+  .reset{position:absolute;top:1.2vh;right:1vw;width:min(6vh,40px);height:min(6vh,40px);border-radius:50%;
+    border:1px solid var(--line);background:transparent;color:var(--muted);font-size:min(3.2vh,22px);cursor:pointer;padding:0}
+  .ringwrap{position:relative;width:min(36vh,240px);aspect-ratio:1}
+  .ringwrap svg{width:100%;height:100%;display:block}
+  #arc{transition:stroke-dasharray .35s ease-out,stroke .3s}
+  .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .center b{font-size:min(15vh,104px);font-weight:300;letter-spacing:-3px;line-height:1}
+  .center small{font-size:min(2.8vh,19px);color:var(--muted);margin-top:.2vh}
+  .center i{font-style:normal;font-size:min(2.6vh,18px);color:var(--accent);height:min(3vh,20px)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);width:100%;text-align:center}
+  .stats div{font-size:min(3.2vh,22px);font-weight:500}
+  .stats em{display:block;font-style:normal;font-size:min(2.2vh,14px);color:var(--muted);font-weight:400;margin-top:.2vh}
+
+  .apps{display:grid;grid-template-columns:1fr 1fr;gap:1.4vw;min-height:0}
+  .tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vh;
+    cursor:pointer;transition:transform .08s,background .08s;min-height:0}
+  .tile:active{transform:scale(.965);background:var(--glass2)}
+  .tile img{object-fit:contain;border-radius:20px}
+  .tile .emoji{line-height:1}
+  .tile span{font-weight:500;text-align:center;max-width:100%;padding:0 6px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile em{font-style:normal;color:var(--muted)}
+  .big img{width:min(17vh,116px);height:min(17vh,116px)}
+  .big .emoji{font-size:min(14vh,96px)}
+  .big span{font-size:min(4.4vh,30px)}
+  .big em{font-size:min(2.8vh,19px)}
+  .waze{background:linear-gradient(150deg,rgba(51,204,255,.30),rgba(51,204,255,.05));border-color:rgba(51,204,255,.35)}
+  .spot{background:linear-gradient(150deg,rgba(29,185,84,.30),rgba(29,185,84,.05));border-color:rgba(29,185,84,.35)}
+
+  /* ---------- dock ---------- */
+  .dock{flex:0 0 17vh;display:grid;grid-template-columns:repeat(7,1fr);gap:1vw}
+  .dock .tile{border-radius:22px;gap:.7vh}
+  .dock img{width:min(7.4vh,50px);height:min(7.4vh,50px);border-radius:14px}
+  .dock .emoji{font-size:min(6.4vh,42px)}
+  .dock span{font-size:min(2.7vh,18px);font-weight:400}
+
+  /* ---------- tiroir ---------- */
+  #drawer{position:fixed;inset:0;background:rgba(6,10,18,.98);display:none;flex-direction:column;
+    padding:2.2vh 2vw;gap:1.6vh;z-index:10}
+  #drawer.open{display:flex}
+  #drawer .bar{display:flex;justify-content:space-between;align-items:center}
+  #drawer h2{margin:0;font-weight:400;font-size:min(4.2vh,28px)}
+  .close{background:var(--glass2);border:1px solid var(--line);color:var(--text);
+    font-size:min(3.4vh,24px);padding:1vh 2.2vw;border-radius:999px;cursor:pointer}
+  #all{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(6,1fr);
+    gap:1.5vh 1.2vw;align-content:start;padding-bottom:2vh}
+  #all .tile{height:19vh;border-radius:22px}
+  #all .tile img{width:min(8vh,56px);height:min(8vh,56px)}
+  #all .tile span{font-size:min(2.7vh,18px);font-weight:400}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <div class="clock" id="clock">--:--</div>
+    <div class="date" id="date"></div>
+  </div>
+  <div class="pill" id="media"></div>
+  <div class="wx">
+    <div class="t" id="temp"></div>
+    <div class="d" id="desc"></div>
+  </div>
+</header>
+
+<main class="main">
+  <section class="card speed">
+    <div class="gps"><span class="dot" id="dot"></span><span id="gps">Recherche GPS…</span></div>
+    <button class="reset" onclick="resetTrip()" aria-label="Remettre le trajet à zéro">↺</button>
+    <div class="ringwrap">
+      <svg viewBox="0 0 200 200">
+        <circle id="track" cx="100" cy="100" r="88" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="11" stroke-linecap="round" transform="rotate(135 100 100)"/>
+        <circle id="arc" cx="100" cy="100" r="88" fill="none" stroke="#22d3ee" stroke-width="11" stroke-linecap="round" transform="rotate(135 100 100)"/>
+      </svg>
+      <div class="center"><b id="spd">0</b><small>km/h</small><i id="dir"></i></div>
+    </div>
+    <div class="stats">
+      <div id="s-dist">0,0<em>km</em></div>
+      <div id="s-time">0 min<em>en route</em></div>
+      <div id="s-avg">0<em>moy.</em></div>
+      <div id="s-max">0<em>max</em></div>
+    </div>
+  </section>
+
+  <section class="apps">
+    <div id="waze" class="card tile big waze"></div>
+    <div id="spotify" class="card tile big spot"></div>
+  </section>
+</main>
+
+<nav class="dock" id="dock"></nav>
+
+<div id="drawer">
+  <div class="bar"><h2>Toutes les applications</h2><button class="close" onclick="closeDrawer()">✕ Fermer</button></div>
+  <div id="all"></div>
+</div>
+
+<script>
+/* ===== CONFIG (modifiable) ===== */
+const LAT = 50.29, LON = 2.78;   // météo (Arras)
+const DOCK = [  /* label | match = noms d'apps (exact d'abord, puis "contient") | emoji de secours */
+  {label:'AutoLink',  match:['autolink'],   emoji:'🔗'},
+  {label:'Navi',      match:['igo_p719wdv2','navi','igo'], emoji:'📍'},
+  {label:'Maps',      match:['maps'],       emoji:'🗺️'},
+  {label:'Radio',     match:['radio'],      emoji:'📻'},
+  {label:'Bluetooth', match:['bluetooth'],  emoji:'📞'},
+  {label:'YouTube',   match:['youtube'],    emoji:'▶️'}
+];
+
+/* ===== Apps installées ===== */
+let apps = [];
+function loadApps(){ try{ apps = JSON.parse(window.Android ? Android.getApps() : '[]'); }catch(e){ apps = []; } }
+function find(matches){
+  for (const m of matches){ const a = apps.find(x => x.name.toLowerCase() === m); if (a) return a; }
+  for (const m of matches){ const a = apps.find(x => x.name.toLowerCase().includes(m) || x.pkg.toLowerCase().includes(m)); if (a) return a; }
+  return null;
+}
+const icon = (app, emoji) => (app && app.icon)
+  ? '<img src="data:image/png;base64,' + app.icon + '">' : '<div class="emoji">' + emoji + '</div>';
+
+function bigTile(id, name, sub, pkg, emoji){
+  const el = document.getElementById(id), app = find([name.toLowerCase()]);
+  el.innerHTML = icon(app, app ? emoji : '📥') + '<span>' + (app ? name : 'Installer ' + name) + '</span><em>' + (app ? sub : 'Ouvre le Play Store') + '</em>';
+  el.onclick = () => app ? Android.launch(app.pkg) : Android.openStore(pkg);
+}
+function dockTile(label, app, emoji, onclick){
+  const d = document.createElement('div'); d.className = 'card tile';
+  d.innerHTML = icon(app, emoji) + '<span></span>'; d.lastChild.textContent = label; d.onclick = onclick; return d;
+}
+function build(){
+  bigTile('waze', 'Waze', 'Navigation', 'com.waze', '🧭');
+  bigTile('spotify', 'Spotify', 'Musique', 'com.spotify.music', '🎧');
+  const dk = document.getElementById('dock'); dk.innerHTML = '';
+  DOCK.forEach(f => { const a = find(f.match); if (a) dk.appendChild(dockTile(f.label, a, f.emoji, () => Android.launch(a.pkg))); });
+  dk.appendChild(dockTile('Toutes les apps', null, '⠿', openDrawer));
+}
+function buildDrawer(){
+  const box = document.getElementById('all'); box.innerHTML = '';
+  apps.forEach(a => box.appendChild(dockTile(a.name, a, '📦', () => Android.launch(a.pkg))));
+  box.appendChild(dockTile('Réglages', null, '⚙️', () => Android.openSettings()));
+}
+function openDrawer(){ buildDrawer(); document.getElementById('drawer').classList.add('open'); }
+function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); }
+window.onBack = closeDrawer;
+window.onResumeApp = function(){ loadApps(); build(); tick(); };
+
+/* ===== Contrôles média ===== */
+const SVG = {
+  prev:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="5" width="3" height="14"/><polygon points="20,5 9,12 20,19"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="7,4 20,12 7,20"/></svg>',
+  next:'<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="4,5 15,12 4,19"/><rect x="17" y="5" width="3" height="14"/></svg>'
+};
+function buildMedia(){
+  const m = document.getElementById('media'); m.innerHTML = '';
+  [['prev',88,''],['play',85,'play'],['next',87,'']].forEach(([k,code,cls]) => {
+    const b = document.createElement('button'); b.className = cls; b.innerHTML = SVG[k];
+    b.onclick = () => Android.media(code); m.appendChild(b);
+  });
+}
+
+/* ===== Horloge ===== */
+function tick(){
+  const n = new Date();
+  document.getElementById('clock').textContent = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+  document.getElementById('date').textContent = n.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+}
+setInterval(tick, 5000);
+
+/* ===== Compteur GPS + trajet ===== */
+const C = 2 * Math.PI * 88, ARC = C * 0.75;
+const arc = document.getElementById('arc'), track = document.getElementById('track');
+track.setAttribute('stroke-dasharray', ARC + ' ' + C);
+function setSpeed(kmh){
+  const v = kmh < 1.5 ? 0 : Math.round(kmh);
+  document.getElementById('spd').textContent = v;
+  arc.setAttribute('stroke-dasharray', (ARC * Math.min(v / 180, 1)) + ' ' + C);
+  arc.setAttribute('stroke', v > 130 ? '#ef4444' : v > 110 ? '#f59e0b' : '#22d3ee');
+}
+setSpeed(0);
+
+const st = {max:0, dist:0, time:0, last:null, lastT:0, fixT:0};
+function hav(a, b){
+  const R = 6371, r = Math.PI / 180, dLa = (b[0]-a[0])*r, dLo = (b[1]-a[1])*r;
+  const x = Math.sin(dLa/2)**2 + Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLo/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+const fr = (n, d) => n.toFixed(d).replace('.', ',');
+function stats(){
+  document.getElementById('s-dist').firstChild.nodeValue = fr(st.dist, 1);
+  const min = Math.floor(st.time / 60), h = Math.floor(min / 60);
+  document.getElementById('s-time').firstChild.nodeValue = h > 0 ? h + ' h ' + String(min % 60).padStart(2,'0') : min + ' min';
+  document.getElementById('s-avg').firstChild.nodeValue = st.time > 0 ? Math.round(st.dist / st.time * 3600) : 0;
+  document.getElementById('s-max').firstChild.nodeValue = Math.round(st.max);
+}
+window.onLoc = function(sp, br, lat, lon, acc){
+  const now = Date.now(), kmh = sp * 3.6;
+  st.fixT = now;
+  setSpeed(kmh);
+  document.getElementById('dot').className = 'dot ok';
+  document.getElementById('gps').textContent = 'GPS';
+  if (kmh > st.max) st.max = kmh;
+  if (st.last && kmh >= 2 && acc <= 50){
+    st.dist += hav(st.last, [lat, lon]);
+    st.time += Math.min((now - st.lastT) / 1000, 5);
+  }
+  st.last = [lat, lon]; st.lastT = now;
+  document.getElementById('dir').textContent = kmh >= 5 ? ['N','NE','E','SE','S','SO','O','NO'][Math.round(br / 45) % 8] : '';
+  stats();
+};
+function resetTrip(){ st.max = 0; st.dist = 0; st.time = 0; stats(); }
+setInterval(() => {
+  if (st.fixT && Date.now() - st.fixT > 10000){
+    document.getElementById('dot').className = 'dot';
+    document.getElementById('gps').textContent = 'Signal GPS perdu';
+    setSpeed(0);
+  }
+}, 3000);
+
+/* ===== Météo (silencieux sans Internet) ===== */
+const WMO = {0:['☀️','Dégagé'],1:['🌤️','Plutôt dégagé'],2:['⛅','Nuageux'],3:['☁️','Couvert'],
+  45:['🌫️','Brouillard'],48:['🌫️','Brouillard'],51:['🌦️','Bruine'],53:['🌦️','Bruine'],55:['🌦️','Bruine'],
+  61:['🌧️','Pluie'],63:['🌧️','Pluie'],65:['🌧️','Forte pluie'],71:['🌨️','Neige'],73:['🌨️','Neige'],75:['🌨️','Neige'],
+  80:['🌦️','Averses'],81:['🌦️','Averses'],82:['⛈️','Fortes averses'],95:['⛈️','Orage'],96:['⛈️','Orage'],99:['⛈️','Orage']};
+function weather(){
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON +
+        '&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis')
+    .then(r => r.json()).then(j => {
+      const c = j.current, d = j.daily, w = WMO[c.weather_code] || ['🌡️',''];
+      document.getElementById('temp').textContent = w[0] + ' ' + Math.round(c.temperature_2m) + '°';
+      document.getElementById('desc').textContent = w[1] + ' · ' + Math.round(d.temperature_2m_min[0]) + '° / ' +
+        Math.round(d.temperature_2m_max[0]) + '° · pluie ' + d.precipitation_probability_max[0] + ' %';
+    }).catch(() => {});
+}
+
+loadApps(); build(); buildMedia(); tick(); stats(); weather();
+setInterval(weather, 15 * 60 * 1000);
+</script>
+</body>
+</html>
